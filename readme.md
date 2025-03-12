@@ -8,6 +8,32 @@ PostgreSQLを使用したCRUD操作の基本と、Renderへのデプロイフロ
 ※ 無料プランを使用しているため、非アクティブ時にインスタンスがスピンダウンします。  
 　その場合、最初のリクエストに50秒程度の遅延が発生する可能性があります。
 
+### Renderデータベースの確認方法
+pgAdminを使用してRenderのデータベースを確認できます：
+
+1. pgAdmin4を起動
+2. 左側のサーバーグループを右クリック→「Register」→「Server...」を選択
+3. 「General」タブ:
+   - Name: 任意の名前（例：`Render-DB`）
+4. 「Connection」タブ:
+   - Host name/address: RenderダッシュボードのHostname
+   - Port: 5432
+   - Database: go_web_app
+   - Username: go_web_app_user
+   - Password: Renderダッシュボードで表示されるパスワード
+5. 「SSL」タブ:
+   - SSL Mode: require
+6. 「Save」をクリックして接続
+
+接続後、以下のSQLクエリでデータを確認できます：
+```sql
+-- テーブル一覧の確認
+SELECT * FROM pg_catalog.pg_tables WHERE schemaname = 'public';
+
+-- タスク一覧の確認
+SELECT * FROM tasks;
+```
+
 ## 技術スタック
 - 言語: Go
 - Webフレームワーク: 標準ライブラリ `net/http`
