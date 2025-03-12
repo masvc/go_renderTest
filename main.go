@@ -4,10 +4,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"go-web-app/db"
 	"go-web-app/handlers"
 	"go-web-app/models"
+
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -16,6 +19,11 @@ func main() {
 
 	// マイグレーションの実行（テーブルの作成）
 	db.DB.AutoMigrate(&models.Task{})
+
+	// ダミーデータの挿入
+	if err := insertDummyData(db.DB); err != nil {
+		log.Printf("Warning: Failed to insert dummy data: %v", err)
+	}
 
 	// ルートハンドラーの設定
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -104,4 +112,58 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func insertDummyData(db *gorm.DB) error {
+	// テーブルが空の場合のみダミーデータを挿入
+	var count int64
+	if err := db.Model(&models.Task{}).Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil // すでにデータが存在する場合は何もしない
+	}
+
+	// 日付の作成
+	deploy := time.Date(2025, 3, 20, 0, 0, 0, 0, time.UTC)
+	test := time.Date(2025, 3, 25, 0, 0, 0, 0, time.UTC)
+	auth := time.Date(2025, 3, 30, 0, 0, 0, 0, time.UTC)
+	search := time.Date(2025, 4, 5, 0, 0, 0, 0, time.UTC)
+	ui := time.Date(2025, 4, 10, 0, 0, 0, 0, time.UTC)
+
+	dummyTasks := []models.Task{
+		{
+			Title:       "Renderへのデプロイ",
+			Description: "Go WebアプリケーションをRenderにデプロイする",
+			DueDate:     &deploy,
+			Status:      true,
+		},
+		{
+			Title:       "テストコードの作成",
+			Description: "アプリケーションの単体テストとE2Eテストを実装する",
+			DueDate:     &test,
+			Status:      false,
+		},
+		{
+			Title:       "ユーザー認証の実装",
+			Description: "JWTを使用したユーザー認証システムを追加する",
+			DueDate:     &auth,
+			Status:      false,
+		},
+		{
+			Title:       "検索機能の追加",
+			Description: "タスクのタイトルと説明で検索できる機能を実装する",
+			DueDate:     &search,
+			Status:      false,
+		},
+		{
+			Title:       "UIの改善",
+			Description: "モバイル対応とダークモードの実装",
+			DueDate:     &ui,
+			Status:      false,
+		},
+	}
+
+	return db.Create(&dummyTasks).Error
 }
