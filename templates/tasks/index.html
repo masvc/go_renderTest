@@ -1,0 +1,204 @@
+{{define "content"}}
+<h1 class="mb-4">タスク一覧</h1>
+
+<div class="mb-4">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        新規タスク作成
+    </button>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>タイトル</th>
+                <th>説明</th>
+                <th>期限</th>
+                <th>状態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Tasks}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Title}}</td>
+                <td>{{.Description}}</td>
+                <td>{{.DueDate.Format "2006-01-02 15:04"}}</td>
+                <td>
+                    <button onclick="toggleTask({{.ID}})" class="btn btn-sm {{if .Status}}btn-success{{else}}btn-secondary{{end}}">
+                        {{if .Status}}完了{{else}}未完了{{end}}
+                    </button>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editTaskModal{{.ID}}">
+                        編集
+                    </button>
+                    <button onclick="deleteTask({{.ID}})" class="btn btn-sm btn-danger">削除</button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<!-- 新規タスク作成モーダル -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新規タスク作成</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createTaskForm" onsubmit="createTask(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">タイトル</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">説明</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">期限</label>
+                        <input type="datetime-local" class="form-control" id="due_date" name="due_date" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">作成</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- タスク編集モーダル -->
+{{range .Tasks}}
+<div class="modal fade" id="editTaskModal{{.ID}}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">タスク編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="updateTask(event, {{.ID}})">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="title{{.ID}}" class="form-label">タイトル</label>
+                        <input type="text" class="form-control" id="title{{.ID}}" name="title" value="{{.Title}}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description{{.ID}}" class="form-label">説明</label>
+                        <textarea class="form-control" id="description{{.ID}}" name="description" rows="3">{{.Description}}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="due_date{{.ID}}" class="form-label">期限</label>
+                        <input type="datetime-local" class="form-control" id="due_date{{.ID}}" name="due_date" value="{{.DueDate.Format "2006-01-02T15:04"}}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">更新</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+
+<script>
+async function toggleTask(id) {
+    try {
+        const response = await fetch(`/tasks/${id}/toggle`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('タスクの状態更新に失敗しました');
+        }
+    } catch (error) {
+        alert('エラーが発生しました');
+    }
+}
+
+async function deleteTask(id) {
+    if (!confirm('本当に削除しますか？')) {
+        return;
+    }
+    try {
+        const response = await fetch(`/tasks/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('タスクの削除に失敗しました');
+        }
+    } catch (error) {
+        alert('エラーが発生しました');
+    }
+}
+
+async function createTask(event) {
+    event.preventDefault();
+    const form = event.target;
+    const data = {
+        title: form.title.value,
+        description: form.description.value,
+        due_date: new Date(form.due_date.value).toISOString()
+    };
+    try {
+        const response = await fetch('/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('タスクの作成に失敗しました');
+        }
+    } catch (error) {
+        alert('エラーが発生しました');
+    }
+}
+
+async function updateTask(event, id) {
+    event.preventDefault();
+    const form = event.target;
+    const data = {
+        title: form.title.value,
+        description: form.description.value,
+        due_date: new Date(form.due_date.value).toISOString()
+    };
+    try {
+        const response = await fetch(`/tasks/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('タスクの更新に失敗しました');
+        }
+    } catch (error) {
+        alert('エラーが発生しました');
+    }
+}
+</script>
+{{end}} 
